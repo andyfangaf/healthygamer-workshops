@@ -4,11 +4,12 @@ let theme = createMuiTheme({
   palette: {
     primary: {
       light: "#63ccff",
-      main: "#009be5",
-      dark: "#006db3",
+      main: "#41c300",
+      dark: "#11253a",
     },
   },
   typography: {
+    fontFamily: "--apple-system, Roboto, Helvetica Neue, sans-serif",
     h5: {
       fontWeight: 500,
       fontSize: 26,
@@ -39,7 +40,12 @@ theme = {
       },
     },
     MuiButton: {
+      containedPrimary: {
+        color: "#fff",
+      },
+
       label: {
+        color: "inherit",
         textTransform: "none",
       },
       contained: {
