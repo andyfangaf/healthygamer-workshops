@@ -23,13 +23,31 @@ interface Props {
 export default function Home({ providers }: Props) {
   const [session, loading] = useSession();
 
+  const AppForm = (
+    <>
+      <Grid item>
+        <TextField
+          label="Description"
+          multiline
+          variant="outlined"
+          placeholder="What would you like your coach to know? E.g. feeling stuck in life"
+        ></TextField>
+      </Grid>
+      <Grid item>
+        <Button color="primary" variant="contained">
+          Register for coaching
+        </Button>
+      </Grid>
+    </>
+  );
+
   if (loading) {
     return <LinearProgress />;
   }
 
   return (
     <Container>
-      <Grid container direction="column">
+      <Grid container direction="column" spacing={2}>
         <Grid item>
           {!session &&
             Object.values(providers).map((provider) => (
@@ -51,20 +69,8 @@ export default function Home({ providers }: Props) {
             </Button>
           )}
         </Grid>
-        <Grid item>
-          <TextField
-            multiline
-            variant="outlined"
-            placeholder="What would you like your coach to know? E.g. feeling stuck in life"
-          ></TextField>
-        </Grid>
-        <Grid item>
-          <Box mt={2}>
-            <Button color="primary" variant="contained">
-              Register for coaching
-            </Button>
-          </Box>
-        </Grid>
+
+        {session && AppForm}
       </Grid>
     </Container>
   );
