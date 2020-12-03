@@ -4,7 +4,6 @@ import {
   Container,
   Button,
   TextField,
-  LinearProgress,
   Grid,
   Avatar,
   Typography,
@@ -18,7 +17,7 @@ import {
   CardContent,
   Chip,
 } from "@material-ui/core";
-import { Skeleton } from "@material-ui/lab";
+import { Alert, AlertTitle, Skeleton } from "@material-ui/lab";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { MdClose } from "react-icons/md";
 import Link from "next/link";
@@ -52,7 +51,7 @@ export default function Home() {
   }, [loading]);
 
   if (loading) {
-    return <LinearProgress />;
+    return <Typography>Loading app...</Typography>;
   }
 
   const submitApp = async () => {
@@ -147,7 +146,15 @@ export default function Home() {
           {!session && (
             <>
               <Box mb={2}>
-                <Typography variant="h4">HealthyGamer Coaching</Typography>
+                <Alert severity="info">
+                  <AlertTitle>Disclaimer</AlertTitle>
+                  This is part 1 of the coding workshop for HealthyGamer, for
+                  learning purposes only. The official app can be{" "}
+                  <Link href="https://coaching.healthygamer.gg/">
+                    found here
+                  </Link>
+                  .
+                </Alert>
               </Box>
               <Button
                 onClick={() => signIn("discord")}
