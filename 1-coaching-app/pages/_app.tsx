@@ -1,7 +1,6 @@
 import { ApolloClient, ApolloProvider, InMemoryCache } from "@apollo/client";
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 
-console.log(process.env);
 const client = new ApolloClient({
   uri: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT,
   cache: new InMemoryCache(),
@@ -97,7 +96,7 @@ theme = {
     },
     MuiDivider: {
       root: {
-        backgroundColor: "#404854",
+        backgroundColor: "#ddd",
       },
     },
     MuiListItemText: {

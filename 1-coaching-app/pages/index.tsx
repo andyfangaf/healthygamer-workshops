@@ -1,11 +1,5 @@
-import React, { useState } from "react";
-import {
-  providers,
-  SessionProvider,
-  signIn,
-  signOut,
-  useSession,
-} from "next-auth/client";
+import React, { useEffect, useState } from "react";
+import { signIn, signOut, useSession } from "next-auth/client";
 import {
   Container,
   Button,
@@ -17,36 +11,53 @@ import {
   Snackbar,
   Box,
   CircularProgress,
+  Divider,
+  IconButton,
+  Card,
+  CardHeader,
+  CardContent,
+  Chip,
 } from "@material-ui/core";
 import { FaDiscord, FaGithub } from "react-icons/fa";
-import { NextPageContext } from "next";
+import { MdClose } from "react-icons/md";
 import Link from "next/link";
-import { useMutation, gql, useSubscription } from "@apollo/client";
+import { useMutation, gql, useApolloClient } from "@apollo/client";
 
-interface Props {
-  providers: SessionProvider;
-}
-
-export default function Home({ providers }: Props) {
+export default function Home() {
   const [session, loading] = useSession();
   const [toastOpen, setToastOpen] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState("");
-  const {
-    data: applicationsData,
-    loading: applicationsLoading,
-  } = useSubscription(SHOW_APPLICATIONS_SUBCRIPTION, {
-    variables: { user: "Fangblade" },
-  });
-  console.log(applicationsData);
+  const [applicationsData, setApplicationsData] = useState();
+  const [applicationsDataLoading, setApplicationsDataLoading] = useState(true);
+  const client = useApolloClient();
   const [sendApplication, { loading: sendApplicationLoading }] = useMutation(
-    CREATE_APPLICATION_MUTATION
+    CREATE_APPLICATION
   );
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    const showApps = async () => {
+      const { data, loading } = await client.query({
+        query: SHOW_APPLICATIONS,
+        variables: { user: session.user.name },
+      });
+
+      setApplicationsData(data);
+      setApplicationsDataLoading(loading);
+    };
+
+    showApps();
+  }, [loading]);
 
   if (loading) {
     return <LinearProgress />;
   }
 
   const submitApp = async () => {
+    // TODO: Use error boundaries
     try {
       await sendApplication({
         variables: {
@@ -93,6 +104,26 @@ export default function Home({ providers }: Props) {
     </Grid>
   ) : null;
 
+  const handleApplicationDelete = (id: string) => {
+    return async () => {
+      try {
+        setApplicationsDataLoading(true);
+        await client.mutate({
+          mutation: DELETE_APPLICATION,
+          variables: {
+            id,
+          },
+          refetchQueries: [{ query: SHOW_APPLICATIONS }],
+        });
+        setApplicationsDataLoading(false);
+      } catch (error) {
+        alert(error);
+      }
+    };
+  };
+
+  const AvatarMarkup = <Avatar src={session.user.image}></Avatar>;
+
   return (
     <Container maxWidth="xs">
       <Grid container direction="column" spacing={3}>
@@ -122,9 +153,7 @@ export default function Home({ providers }: Props) {
             <Grid container item justify="space-between" alignItems="center">
               <Grid item>
                 <Grid container alignItems="center" spacing={1}>
-                  <Grid item>
-                    <Avatar src={session.user.image}></Avatar>
-                  </Grid>
+                  <Grid item>{AvatarMarkup}</Grid>
                   <Grid item>
                     <Typography>{session.user.name}</Typography>
                   </Grid>
@@ -140,6 +169,43 @@ export default function Home({ providers }: Props) {
         </Grid>
 
         {AppForm}
+
+        <Grid item>
+          <Divider />
+        </Grid>
+
+        <Grid item>
+          <Typography variant="h6">My applications</Typography>
+          {applicationsDataLoading ? <CircularProgress /> : null}
+
+          {applicationsData &&
+            applicationsData.applications &&
+            applicationsData.applications.map(({ id, description }, i) => {
+              return (
+                <Card key={`Application-${i}`}>
+                  <CardHeader
+                    title={<Chip color="default" label="Pending"></Chip>}
+                    action={
+                      <IconButton
+                        size="small"
+                        onClick={handleApplicationDelete(id)}
+                      >
+                        <MdClose />
+                      </IconButton>
+                    }
+                  ></CardHeader>
+                  <CardContent>
+                    <Typography>{description}</Typography>
+                  </CardContent>
+                </Card>
+              );
+            })}
+        </Grid>
+
+        <Grid item>
+          <Typography variant="h6">My sessions</Typography>
+          <Typography>Coming soon on the next workshop...</Typography>
+        </Grid>
       </Grid>
 
       <Snackbar
@@ -151,15 +217,8 @@ export default function Home({ providers }: Props) {
   );
 }
 
-Home.getInitialProps = async (context: NextPageContext) => {
-  // providers is incorrectly typed in the library, so we're disabling it here.
-  return {
-    providers: await (providers as any)(context),
-  };
-};
-
-const CREATE_APPLICATION_MUTATION = gql`
-  mutation CreateApplicationMutation($description: String, $user: String) {
+const CREATE_APPLICATION = gql`
+  mutation CreateApplication($description: String!, $user: String!) {
     insert_applications(objects: { description: $description, user: $user }) {
       returning {
         id
@@ -168,12 +227,21 @@ const CREATE_APPLICATION_MUTATION = gql`
   }
 `;
 
-const SHOW_APPLICATIONS_SUBCRIPTION = gql`
-  subscription ShowApplicationsSubscription($user: String) {
+const DELETE_APPLICATION = gql`
+  mutation DeleteApplication($id: uuid!) {
+    delete_applications(where: { id: { _eq: $id } }) {
+      returning {
+        id
+      }
+    }
+  }
+`;
+
+const SHOW_APPLICATIONS = gql`
+  query ShowApplications($user: String!) {
     applications(where: { user: { _eq: $user } }) {
-      description
       id
-      user
+      description
     }
   }
 `;
