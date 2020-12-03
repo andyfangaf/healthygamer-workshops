@@ -18,9 +18,10 @@ import {
   Box,
   CircularProgress,
 } from "@material-ui/core";
-import { FaDiscord } from "react-icons/fa";
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import { NextPageContext } from "next";
-import { useMutation, gql } from "@apollo/client";
+import Link from "next/link";
+import { useMutation, gql, useSubscription } from "@apollo/client";
 
 interface Props {
   providers: SessionProvider;
@@ -30,6 +31,13 @@ export default function Home({ providers }: Props) {
   const [session, loading] = useSession();
   const [toastOpen, setToastOpen] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState("");
+  const {
+    data: applicationsData,
+    loading: applicationsLoading,
+  } = useSubscription(SHOW_APPLICATIONS_SUBCRIPTION, {
+    variables: { user: "Fangblade" },
+  });
+  console.log(applicationsData);
   const [sendApplication, { loading: sendApplicationLoading }] = useMutation(
     CREATE_APPLICATION_MUTATION
   );
@@ -46,26 +54,15 @@ export default function Home({ providers }: Props) {
           description: descriptionValue,
         },
       });
+      setToastOpen(true);
     } catch (error) {
       // TODO: Add error handling
       alert(error);
     }
-
-    setToastOpen(true);
   };
 
   const AppForm = session ? (
     <Grid container direction="column" spacing={2}>
-      <Grid item>
-        <Grid container alignItems="center" spacing={1}>
-          <Grid item>
-            <Avatar src={session.user.image}></Avatar>
-          </Grid>
-          <Grid item>
-            <Typography>{session.user.name}</Typography>
-          </Grid>
-        </Grid>
-      </Grid>
       <Grid item>
         <TextField
           label="Description"
@@ -97,43 +94,60 @@ export default function Home({ providers }: Props) {
   ) : null;
 
   return (
-    <>
-      <Container maxWidth="xs">
-        <Grid container direction="column" spacing={2}>
-          <Grid item>
-            {!session && (
-              <>
-                <Box mb={2}>
-                  <Typography variant="h2">HealthyGamer Coaching</Typography>
-                </Box>
-                <Button
-                  onClick={() => signIn("discord")}
-                  color="primary"
-                  variant="contained"
-                  startIcon={<FaDiscord />}
-                >
-                  Login with Discord
-                </Button>
-              </>
-            )}
-
-            {session && (
-              <Button onClick={() => signOut()} size="large">
-                Logout
+    <Container maxWidth="xs">
+      <Grid container direction="column" spacing={3}>
+        <Grid item>
+          {!session && (
+            <>
+              <Box mb={2}>
+                <Typography variant="h4">HealthyGamer Coaching</Typography>
+              </Box>
+              <Button
+                onClick={() => signIn("discord")}
+                color="primary"
+                variant="contained"
+                startIcon={<FaDiscord />}
+              >
+                Login with Discord
               </Button>
-            )}
-          </Grid>
+              <Box mt={2}>
+                <Link href="https://github.com/fandy/healthygamer-workshops/tree/main/1-coaching-app">
+                  <Button startIcon={<FaGithub />}>Source code</Button>
+                </Link>
+              </Box>
+            </>
+          )}
 
-          {AppForm}
+          {session && (
+            <Grid container item justify="space-between" alignItems="center">
+              <Grid item>
+                <Grid container alignItems="center" spacing={1}>
+                  <Grid item>
+                    <Avatar src={session.user.image}></Avatar>
+                  </Grid>
+                  <Grid item>
+                    <Typography>{session.user.name}</Typography>
+                  </Grid>
+                </Grid>
+              </Grid>
+              <Grid item>
+                <Button onClick={() => signOut()} size="large">
+                  Logout
+                </Button>
+              </Grid>
+            </Grid>
+          )}
         </Grid>
 
-        <Snackbar
-          open={toastOpen}
-          onClose={() => setToastOpen(false)}
-          message="Success! Your coach will reach out to you soon."
-        />
-      </Container>
-    </>
+        {AppForm}
+      </Grid>
+
+      <Snackbar
+        open={toastOpen}
+        onClose={() => setToastOpen(false)}
+        message="Success! Your coach will reach out to you soon."
+      />
+    </Container>
   );
 }
 
@@ -150,6 +164,16 @@ const CREATE_APPLICATION_MUTATION = gql`
       returning {
         id
       }
+    }
+  }
+`;
+
+const SHOW_APPLICATIONS_SUBCRIPTION = gql`
+  subscription ShowApplicationsSubscription($user: String) {
+    applications(where: { user: { _eq: $user } }) {
+      description
+      id
+      user
     }
   }
 `;
