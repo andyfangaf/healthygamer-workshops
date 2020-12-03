@@ -15,9 +15,12 @@ import {
   Avatar,
   Typography,
   Snackbar,
+  Box,
+  CircularProgress,
 } from "@material-ui/core";
 import { FaDiscord } from "react-icons/fa";
 import { NextPageContext } from "next";
+import { useMutation, gql } from "@apollo/client";
 
 interface Props {
   providers: SessionProvider;
@@ -27,14 +30,28 @@ export default function Home({ providers }: Props) {
   const [session, loading] = useSession();
   const [toastOpen, setToastOpen] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState("");
+  const [sendApplication, { loading: sendApplicationLoading }] = useMutation(
+    CREATE_APPLICATION_MUTATION
+  );
 
   if (loading) {
     return <LinearProgress />;
   }
 
-  const submitApp = () => {
+  const submitApp = async () => {
+    try {
+      await sendApplication({
+        variables: {
+          user: session.user.name,
+          description: descriptionValue,
+        },
+      });
+    } catch (error) {
+      // TODO: Add error handling
+      alert(error);
+    }
+
     setToastOpen(true);
-    return;
   };
 
   const AppForm = session ? (
@@ -65,31 +82,39 @@ export default function Home({ providers }: Props) {
           color="primary"
           variant="contained"
           onClick={submitApp}
-          disabled={descriptionValue === ""}
+          disabled={descriptionValue === "" || sendApplicationLoading}
           fullWidth
           size="large"
         >
-          Register for coaching
+          {sendApplicationLoading ? (
+            <CircularProgress size={24} />
+          ) : (
+            "Register for coaching"
+          )}
         </Button>
       </Grid>
     </Grid>
   ) : null;
 
-  console.log(providers);
   return (
     <>
       <Container maxWidth="xs">
         <Grid container direction="column" spacing={2}>
           <Grid item>
             {!session && (
-              <Button
-                onClick={() => signIn("discord")}
-                color="primary"
-                variant="contained"
-                startIcon={<FaDiscord />}
-              >
-                Login with Discord
-              </Button>
+              <>
+                <Box mb={2}>
+                  <Typography variant="h2">HealthyGamer Coaching</Typography>
+                </Box>
+                <Button
+                  onClick={() => signIn("discord")}
+                  color="primary"
+                  variant="contained"
+                  startIcon={<FaDiscord />}
+                >
+                  Login with Discord
+                </Button>
+              </>
             )}
 
             {session && (
@@ -118,3 +143,13 @@ Home.getInitialProps = async (context: NextPageContext) => {
     providers: await (providers as any)(context),
   };
 };
+
+const CREATE_APPLICATION_MUTATION = gql`
+  mutation CreateApplicationMutation($description: String, $user: String) {
+    insert_applications(objects: { description: $description, user: $user }) {
+      returning {
+        id
+      }
+    }
+  }
+`;

@@ -1,4 +1,11 @@
+import { ApolloClient, ApolloProvider, InMemoryCache } from "@apollo/client";
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
+
+console.log(process.env);
+const client = new ApolloClient({
+  uri: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT,
+  cache: new InMemoryCache(),
+});
 
 let theme = createMuiTheme({
   palette: {
@@ -118,9 +125,11 @@ theme = {
 
 function MyApp({ Component, pageProps }) {
   return (
-    <ThemeProvider theme={theme}>
-      <Component {...pageProps} />
-    </ThemeProvider>
+    <ApolloProvider client={client}>
+      <ThemeProvider theme={theme}>
+        <Component {...pageProps} />
+      </ThemeProvider>
+    </ApolloProvider>
   );
 }
 
