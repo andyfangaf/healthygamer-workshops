@@ -18,7 +18,7 @@ import {
   CardContent,
   Chip,
 } from "@material-ui/core";
-import Skeleton from "@material-ui/lab/Skeleton";
+import { Skeleton } from "@material-ui/lab";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { MdClose } from "react-icons/md";
 import Link from "next/link";
@@ -58,6 +58,7 @@ export default function Home() {
   const submitApp = async () => {
     // TODO: Use error boundaries
     try {
+      setSendApplicationLoading(true);
       const { data } = await client.mutate({
         mutation: CREATE_APPLICATION,
         variables: {
@@ -69,6 +70,7 @@ export default function Home() {
         ...applicationsData,
         ...data.insert_applications.returning,
       ]);
+      setSendApplicationLoading(false);
       setToastOpen(true);
     } catch (error) {
       // TODO: Add error handling
@@ -124,7 +126,6 @@ export default function Home() {
     };
   };
 
-  const AvatarMarkup = <Avatar src={session.user.image}></Avatar>;
   const SkeletonCardMarkup = new Array(3).fill(null).map((_, i) => (
     <Grid item key={`SkeletonCard-${i}`}>
       <Card>
@@ -168,7 +169,9 @@ export default function Home() {
             <Grid container item justify="space-between" alignItems="center">
               <Grid item>
                 <Grid container alignItems="center" spacing={1}>
-                  <Grid item>{AvatarMarkup}</Grid>
+                  <Grid item>
+                    <Avatar src={session.user.image}></Avatar>
+                  </Grid>
                   <Grid item>
                     <Typography>{session.user.name}</Typography>
                   </Grid>
@@ -185,49 +188,53 @@ export default function Home() {
 
         {AppForm}
 
-        <Grid item>
-          <Divider />
-        </Grid>
+        {session ? (
+          <>
+            <Grid item>
+              <Divider />
+            </Grid>
 
-        <Grid item>
-          <Typography variant="h6">My applications</Typography>
-          <Grid container direction="column" spacing={2}>
-            {applicationsDataLoading ? SkeletonCardMarkup : null}
-            {applicationsData.length === 0 ? (
-              <Grid item>
-                <Typography>No applications from you yet</Typography>
+            <Grid item>
+              <Typography variant="h6">My applications</Typography>
+              <Grid container direction="column" spacing={2}>
+                {applicationsDataLoading ? SkeletonCardMarkup : null}
+                {applicationsData.length === 0 ? (
+                  <Grid item>
+                    <Typography>No applications from you yet</Typography>
+                  </Grid>
+                ) : null}
+
+                {applicationsData.map(({ id, description }, i) => {
+                  return (
+                    <Grid item key={`Application-${i}`}>
+                      <Card>
+                        <CardHeader
+                          title={<Chip color="default" label="Pending"></Chip>}
+                          action={
+                            <IconButton
+                              size="small"
+                              onClick={handleApplicationDelete(id)}
+                            >
+                              <MdClose />
+                            </IconButton>
+                          }
+                        ></CardHeader>
+                        <CardContent>
+                          <Typography>{description}</Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  );
+                })}
               </Grid>
-            ) : null}
+            </Grid>
 
-            {applicationsData.map(({ id, description }, i) => {
-              return (
-                <Grid item key={`Application-${i}`}>
-                  <Card>
-                    <CardHeader
-                      title={<Chip color="default" label="Pending"></Chip>}
-                      action={
-                        <IconButton
-                          size="small"
-                          onClick={handleApplicationDelete(id)}
-                        >
-                          <MdClose />
-                        </IconButton>
-                      }
-                    ></CardHeader>
-                    <CardContent>
-                      <Typography>{description}</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
-        </Grid>
-
-        <Grid item>
-          <Typography variant="h6">My sessions</Typography>
-          <Typography>Coming soon on the next workshop...</Typography>
-        </Grid>
+            <Grid item>
+              <Typography variant="h6">My sessions</Typography>
+              <Typography>Coming soon on the next workshop...</Typography>
+            </Grid>
+          </>
+        ) : null}
       </Grid>
 
       <Snackbar

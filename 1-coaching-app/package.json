@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.0.0",
     "@material-ui/core": "^4.11.1",
     "@material-ui/icons": "^4.9.1",
+    "@material-ui/lab": "^4.0.0-alpha.57",
     "framer-motion": "^2.9.5",
     "graphql": "^15.4.0",
     "next": "10.0.3",
