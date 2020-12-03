@@ -18,21 +18,20 @@ import {
   CardContent,
   Chip,
 } from "@material-ui/core";
+import Skeleton from "@material-ui/lab/Skeleton";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { MdClose } from "react-icons/md";
 import Link from "next/link";
-import { useMutation, gql, useApolloClient } from "@apollo/client";
+import { gql, useApolloClient } from "@apollo/client";
 
 export default function Home() {
   const [session, loading] = useSession();
   const [toastOpen, setToastOpen] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState("");
-  const [applicationsData, setApplicationsData] = useState();
+  const [applicationsData, setApplicationsData] = useState([]);
   const [applicationsDataLoading, setApplicationsDataLoading] = useState(true);
+  const [sendApplicationLoading, setSendApplicationLoading] = useState(false);
   const client = useApolloClient();
-  const [sendApplication, { loading: sendApplicationLoading }] = useMutation(
-    CREATE_APPLICATION
-  );
 
   useEffect(() => {
     if (!session) {
@@ -45,7 +44,7 @@ export default function Home() {
         variables: { user: session.user.name },
       });
 
-      setApplicationsData(data);
+      setApplicationsData(data.applications);
       setApplicationsDataLoading(loading);
     };
 
@@ -59,12 +58,17 @@ export default function Home() {
   const submitApp = async () => {
     // TODO: Use error boundaries
     try {
-      await sendApplication({
+      const { data } = await client.mutate({
+        mutation: CREATE_APPLICATION,
         variables: {
           user: session.user.name,
           description: descriptionValue,
         },
       });
+      setApplicationsData([
+        ...applicationsData,
+        ...data.insert_applications.returning,
+      ]);
       setToastOpen(true);
     } catch (error) {
       // TODO: Add error handling
@@ -107,15 +111,13 @@ export default function Home() {
   const handleApplicationDelete = (id: string) => {
     return async () => {
       try {
-        setApplicationsDataLoading(true);
         await client.mutate({
           mutation: DELETE_APPLICATION,
           variables: {
             id,
           },
-          refetchQueries: [{ query: SHOW_APPLICATIONS }],
         });
-        setApplicationsDataLoading(false);
+        setApplicationsData(applicationsData.filter((data) => data.id !== id));
       } catch (error) {
         alert(error);
       }
@@ -123,6 +125,19 @@ export default function Home() {
   };
 
   const AvatarMarkup = <Avatar src={session.user.image}></Avatar>;
+  const SkeletonCardMarkup = new Array(3).fill(null).map((_, i) => (
+    <Grid item key={`SkeletonCard-${i}`}>
+      <Card>
+        <CardHeader>
+          <Skeleton variant="rect" width={210} height={118} />
+        </CardHeader>
+        <CardContent>
+          <Skeleton />
+          <Skeleton width="60%" />
+        </CardContent>
+      </Card>
+    </Grid>
+  ));
 
   return (
     <Container maxWidth="xs">
@@ -176,30 +191,37 @@ export default function Home() {
 
         <Grid item>
           <Typography variant="h6">My applications</Typography>
-          {applicationsDataLoading ? <CircularProgress /> : null}
+          <Grid container direction="column" spacing={2}>
+            {applicationsDataLoading ? SkeletonCardMarkup : null}
+            {applicationsData.length === 0 ? (
+              <Grid item>
+                <Typography>No applications from you yet</Typography>
+              </Grid>
+            ) : null}
 
-          {applicationsData &&
-            applicationsData.applications &&
-            applicationsData.applications.map(({ id, description }, i) => {
+            {applicationsData.map(({ id, description }, i) => {
               return (
-                <Card key={`Application-${i}`}>
-                  <CardHeader
-                    title={<Chip color="default" label="Pending"></Chip>}
-                    action={
-                      <IconButton
-                        size="small"
-                        onClick={handleApplicationDelete(id)}
-                      >
-                        <MdClose />
-                      </IconButton>
-                    }
-                  ></CardHeader>
-                  <CardContent>
-                    <Typography>{description}</Typography>
-                  </CardContent>
-                </Card>
+                <Grid item key={`Application-${i}`}>
+                  <Card>
+                    <CardHeader
+                      title={<Chip color="default" label="Pending"></Chip>}
+                      action={
+                        <IconButton
+                          size="small"
+                          onClick={handleApplicationDelete(id)}
+                        >
+                          <MdClose />
+                        </IconButton>
+                      }
+                    ></CardHeader>
+                    <CardContent>
+                      <Typography>{description}</Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
               );
             })}
+          </Grid>
         </Grid>
 
         <Grid item>
@@ -218,27 +240,29 @@ export default function Home() {
 }
 
 const CREATE_APPLICATION = gql`
-  mutation CreateApplication($description: String!, $user: String!) {
+  mutation CreateApplication($description: String, $user: String) {
     insert_applications(objects: { description: $description, user: $user }) {
       returning {
         id
+        description
       }
     }
   }
 `;
 
 const DELETE_APPLICATION = gql`
-  mutation DeleteApplication($id: uuid!) {
+  mutation DeleteApplication($id: uuid) {
     delete_applications(where: { id: { _eq: $id } }) {
       returning {
         id
+        description
       }
     }
   }
 `;
 
 const SHOW_APPLICATIONS = gql`
-  query ShowApplications($user: String!) {
+  query ShowApplications($user: String) {
     applications(where: { user: { _eq: $user } }) {
       id
       description
