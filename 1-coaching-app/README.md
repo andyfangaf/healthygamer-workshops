@@ -1,14 +1,3 @@
-```
-All features in the code marked with TODO comments are going to be done in future workshops
-```
+# Planning
 
-# Brain
-
-## Pages
-
-- Login page with Discord
-- Application submission page
-
-## Components
-
--
+Let's go through this together.
